@@ -12,7 +12,7 @@ require 'macos'
 # 8) Build-system agnostic configuration of the tool-chain
 
 def superenv_bin
-  @bin ||= (HOMEBREW_REPOSITORY/"Library/x").children.reject{|d| d.basename.to_s > MacOS::Xcode.version }.max
+  @bin ||= (HOMEBREW_REPOSITORY/"Library/ev").children.reject{|d| d.basename.to_s > MacOS::Xcode.version }.max
 end
 
 def superenv?
@@ -38,14 +38,15 @@ class << ENV
 
   def setup_build_environment
     reset
-    ENV['CC'] = determine_cc
-    ENV['CXX'] = determine_cxx
+    ENV['CC'] = 'cc'
+    ENV['CXX'] = 'c++'
     ENV['LD'] = 'ld'
     ENV['CPP'] = 'cpp'
     ENV['MAKE'] = 'make'
     ENV['MAKEFLAGS'] ||= "-j#{determine_make_jobs}"
     ENV['PATH'] = determine_path
     ENV['PKG_CONFIG_PATH'] = determine_pkg_config_path
+    ENV['HOMEBREW_CC'] = determine_cc
     ENV['HOMEBREW_CCCFG'] = determine_cccfg
     ENV['HOMEBREW_SDKROOT'] = "#{MacOS.sdk_path}" if MacSystem.xcode43_without_clt?
     ENV['CMAKE_PREFIX_PATH'] = determine_cmake_prefix_path
@@ -88,19 +89,7 @@ class << ENV
       raise
     end
   rescue
-    # Don't specify 'clang', eg. dirac detects for `cl*)` (the windows
-    # compiler) in its (broken) configure.
-    "cc"
-  end
-
-  def determine_cxx
-    case cc.to_s
-      when "clang" then "clang++"
-      when "llvm-gcc" then "llvm-g++"
-      when "gcc" then "g++"
-    else
-      "c++"
-    end
+    "clang"
   end
 
   def determine_path
@@ -178,10 +167,9 @@ class << ENV
 
 ### DEPRECATE THESE
   def compiler
-    case (bn = File.basename(ENV['CC']))
+    case ENV['HOMEBREW_CC']
       when "llvm-gcc" then :llvm
-      when "gcc", "clang" then bn.to_sym
-      when "cc", nil then MacOS.default_compiler
+      when "gcc", "clang" then ENV['HOMEBREW_CC'].to_sym
     else
       raise
     end

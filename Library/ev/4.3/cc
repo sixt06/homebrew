@@ -26,13 +26,6 @@ def cmake_prefixes
     end
   end
 end
-def cc
-  case cc = ENV['CC'].basename.chuzzle when /gcc/
-    cc.split(' ').first # $CC may be set with args
-  else
-    'clang'
-  end
-end
 
 class Cmd
   def initialize path, args
@@ -52,11 +45,18 @@ class Cmd
   end
   def tool
     case @cmd
-      when 'clang', 'cc' then 'clang'
-      when 'clang++', 'c++' then 'clang++'
       when /gcc/ then 'gcc'
       when /g\+\+/ then 'g++'
-      when 'ld', 'cpp' then cc
+    when 'clang', 'clang++'
+      @cmd
+    when 'ld', 'cpp', 'cc'
+      ENV['HOMEBREW_CC'].chuzzle or 'cc'
+    when 'c++'
+      case ENV['HOMEBREW_CC']
+        when 'clang' then 'clang++'
+        when /gcc/ then 'g++'
+        else 'c++'
+      end
     else
       abort "Unknown command: #{@cmd}"
     end
